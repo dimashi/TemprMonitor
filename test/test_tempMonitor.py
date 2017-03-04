@@ -4,10 +4,13 @@ from unittest.mock import patch, Mock
 from src.main import TempMonitor, BatteryStatus
 
 
-class TestTempMonitor(TestCase):
+# ignored tests
+def ignore_test_send_email():
+    # test sending real email
+    TempMonitor.send_email("test")
 
-    def ignore_test_send_email(self):
-        TempMonitor.send_email("test")
+
+class TestTempMonitor(TestCase):
 
     @patch('src.main.TempMonitor.mailer')
     def test_send_email_mock(self, mailer_mock):
@@ -24,9 +27,9 @@ class TestTempMonitor(TestCase):
     @patch('src.main.TempMonitor.device')
     def test_get_battery_info(self, device_mock):
         id_temp = "id_temp"
-        temp_in_C100 = 200.0
+        temp_in_c10 = 200.0
         error_temp = None
-        device_mock.batteryGetTemperature = Mock(return_value=(id_temp, temp_in_C100, error_temp))
+        device_mock.batteryGetTemperature = Mock(return_value=(id_temp, temp_in_c10, error_temp))
 
         id_level = "id_level"
         battery_level = 20
@@ -38,16 +41,13 @@ class TestTempMonitor(TestCase):
         error_status = None
         device_mock.batteryGetStatus = Mock(return_value=(id_status, battery_status, error_status))
 
-        (actual_battery_status, actual_battery_level, temp_in_F) = TempMonitor.get_battery_info()
+        (actual_battery_status, actual_battery_level, temp_f) = TempMonitor.get_battery_info()
 
         self.assertEqual(battery_status, actual_battery_status)
         self.assertEqual(battery_level, actual_battery_level)
-        self.assertEqual(59.0, temp_in_F)
+        self.assertEqual(59.0, temp_f)
 
         assert device_mock.batteryStartMonitoring.called
         assert device_mock.batteryGetTemperature.called
         assert device_mock.batteryGetLevel.called
         assert device_mock.batteryGetStatus.called
-
-
-
