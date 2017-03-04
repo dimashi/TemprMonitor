@@ -22,7 +22,7 @@ def c_to_f(temp_c):
 
 
 def log(*args):
-    print(datetime.now().strftime('%c'), end=" ")
+    print(datetime.now().strftime('%a %x %X'), end=" ")
     print(*args)
 
 
@@ -85,10 +85,10 @@ class TempMonitor:
         if Setup.calc_external_temp:
             external_temp_c = get_external_temp_c(temp_c)
             external_temp_f = c_to_f(external_temp_c)
-            cls.log("%s, %.2fF, external %.2fF" % (battery_status_str, temp_f, external_temp_f))
+            cls.log("%s, %.0fF, ext %.0fF" % (battery_status_str, temp_f, external_temp_f))
             temp_f = external_temp_f
         else:
-            cls.log("%s, %.2fF" % (battery_status_str, temp_f))
+            cls.log("%s, %.0fF" % (battery_status_str, temp_f))
 
         return battery_status, battery_level, temp_f
 
@@ -103,10 +103,10 @@ class TempMonitor:
     def make_message(cls, temp_f):
         message = None
         if temp_f < Setup.temp_min:
-            message = "Freezing below %s F: current temp %.2f F" % (Setup.temp_min, temp_f)
+            message = "Freezing below %s F: current temp %.0f F" % (Setup.temp_min, temp_f)
 
         if temp_f > Setup.temp_max:
-            message = "Frying above %s F: current temp %.2f F" % (Setup.temp_max, temp_f)
+            message = "Frying above %s F: current temp %.0f F" % (Setup.temp_max, temp_f)
         return message
 
     @classmethod
