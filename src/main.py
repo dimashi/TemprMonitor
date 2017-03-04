@@ -121,11 +121,11 @@ class TempMonitor:
             else:
                 sleep_period = Setup.sleep_after_send_sms
                 if cls.sim_exists:
-                    cls.log("Texting to %s: %s" % Setup.phones_numbers, message)
+                    cls.log("Texting to %s:" % Setup.phones_numbers, message)
                     for phone_number in Setup.phones_numbers:
                         cls.get_device().smsSend(phone_number, message)
 
-                cls.log("Emailing to %s: %s" % Setup.emails, message)
+                cls.log("Emailing to %s:" % Setup.emails, message)
                 cls.send_email(message)
 
             if cls.stop:
