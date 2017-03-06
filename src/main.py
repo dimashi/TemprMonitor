@@ -126,7 +126,8 @@ class TempMonitor:
                         cls.get_device().smsSend(phone_number, message)
 
                 cls.log("Emailing to %s:" % Setup.emails, message)
-                cls.send_email(message)
+                if cls.send_email(message):
+                    cls.log("Email sent")
 
             if cls.stop:
                 break
@@ -179,6 +180,7 @@ class TempMonitor:
             cls.device = android.Android()
             (simid, result, error) = cls.device.getSimState()
             cls.sim_exists = error is None
+            cls.log("SIM state: ", simid, result, error)
         return cls.device
 
     @classmethod
@@ -186,7 +188,12 @@ class TempMonitor:
         if cls.mailer is None:
             import yagmail
             cls.mailer = yagmail.SMTP(Setup.user, Setup.password)
-        cls.mailer.send(Setup.emails, 'Temperature monitor', msg)
+        if not cls.mailer.send(Setup.emails, 'Temperature monitor', msg):
+            cls.mailer.login(Setup.password)
+            return cls.mailer.send(Setup.emails, 'Temperature monitor', msg)
+        else:
+            return True
+
 
 print("File name:", __file__, "Module name:", __name__)
 if __name__ == '__main__':
