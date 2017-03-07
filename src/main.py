@@ -188,11 +188,14 @@ class TempMonitor:
         if cls.mailer is None:
             import yagmail
             cls.mailer = yagmail.SMTP(Setup.user, Setup.password)
-        if not cls.mailer.send(Setup.emails, 'Temperature monitor', msg):
-            cls.mailer.login(Setup.password)
-            return cls.mailer.send(Setup.emails, 'Temperature monitor', msg)
         else:
-            return True
+            cls.mailer.login(Setup.password)
+
+        try:
+            ret = cls.mailer.send(Setup.emails, 'Temperature monitor', msg)
+        except Exception as err:
+            cls.log(err)
+        cls.mailer.close()
 
 
 print("File name:", __file__, "Module name:", __name__)

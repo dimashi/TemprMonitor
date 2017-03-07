@@ -4,13 +4,13 @@ from unittest.mock import patch, Mock
 from src.main import TempMonitor, BatteryStatus
 
 
-# ignored tests
-def ignore_test_send_email():
-    # test sending real email
-    TempMonitor.send_email("test")
-
-
 class TestTempMonitor(TestCase):
+
+    def test_send_email(self):
+        # test sending real email
+        TempMonitor.send_email("test1")
+        TempMonitor.send_email("test2")
+
 
     @patch('src.main.TempMonitor.mailer')
     def test_send_email_mock(self, mailer_mock):
