@@ -178,9 +178,10 @@ class TempMonitor:
         if cls.device is None:
             import android
             cls.device = android.Android()
-            (simid, result, error) = cls.device.getSimState()
-            cls.sim_exists = error is None
-            cls.log("SIM state: ", simid, result, error)
+            (opid, result, error) = cls.device.getNetworkOperatorName()
+            #cls.device.getSimState()
+            cls.sim_exists = len(result) > 1
+            cls.log("getNetworkOperatorName: ", opid, result, error)
         return cls.device
 
     @classmethod
