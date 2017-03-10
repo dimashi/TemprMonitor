@@ -1,3 +1,4 @@
+import traceback
 from datetime import datetime
 from time import sleep
 
@@ -179,24 +180,34 @@ class TempMonitor:
             import android
             cls.device = android.Android()
             (opid, result, error) = cls.device.getNetworkOperatorName()
-            #cls.device.getSimState()
             cls.sim_exists = len(result) > 1
             cls.log("getNetworkOperatorName: ", opid, result, error)
         return cls.device
 
     @classmethod
     def send_email(cls, msg):
-        if cls.mailer is None:
-            import yagmail
-            cls.mailer = yagmail.SMTP(Setup.user, Setup.password)
-        else:
-            cls.mailer.login(Setup.password)
-
+        ret = False
         try:
+            if cls.mailer is None:
+                import yagmail
+                cls.mailer = yagmail.SMTP(Setup.user, Setup.password)
+            else:
+                cls.mailer.login(Setup.password)
+
             ret = cls.mailer.send(Setup.emails, 'Temperature monitor', msg)
-        except Exception as err:
-            cls.log(err)
+        except:
+            info = traceback.format_exc()
+            cls.log(info)
+
         cls.mailer.close()
+        return ret
+
+    @classmethod
+    def try_send_email(cls, msg):
+        for i in range(3):
+            if cls.send_email(msg):
+                return
+            sleep(2)
 
 
 print("File name:", __file__, "Module name:", __name__)

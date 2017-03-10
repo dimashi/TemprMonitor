@@ -1,21 +1,43 @@
+import socket
 from unittest import TestCase
 from unittest.mock import patch, Mock
 
-from src.main import TempMonitor, BatteryStatus
+import config
+from src.main import TempMonitor, BatteryStatus, Setup
 
 
 class TestTempMonitor(TestCase):
+
+    def setUp(self):
+        Setup.emails = config.test_emails
 
     def test_send_email(self):
         # test sending real email
         TempMonitor.send_email("test1")
         TempMonitor.send_email("test2")
 
-
     @patch('src.main.TempMonitor.mailer')
     def test_send_email_mock(self, mailer_mock):
-        TempMonitor.send_email("test")
+        self.assertTrue(TempMonitor.send_email("test"))
+        assert mailer_mock.login.called
         assert mailer_mock.send.called
+        assert mailer_mock.close.called
+
+    @patch('src.main.TempMonitor.mailer')
+    def test_send_email_mock_failed_send(self, mailer_mock):
+        mailer_mock.send.side_effect = socket.gaierror
+        self.assertFalse(TempMonitor.send_email("test"))
+        assert mailer_mock.login.called
+        assert mailer_mock.send.called
+        assert mailer_mock.close.called
+
+    @patch('src.main.TempMonitor.mailer')
+    def test_send_email_mock_failed_login(self, mailer_mock):
+        mailer_mock.login.side_effect = socket.gaierror
+        self.assertFalse(TempMonitor.send_email("test"))
+        assert mailer_mock.login.called
+        assert mailer_mock.login.not_called
+        assert mailer_mock.close.called
 
     def test_battery_to_string(self):
         self.assertEqual("10+", TempMonitor.battery_to_string(BatteryStatus.charging, 10))
