@@ -223,3 +223,5 @@ class TempMonitor:
                 return True
             sleep(2)
         return False
+
+TempMonitor.run()
