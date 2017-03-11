@@ -11,28 +11,38 @@ class TestTempMonitor(TestCase):
     def setUp(self):
         Setup.emails = config.test_emails
 
-    def test_send_email(self):
+    @patch('src.main.TempMonitor.ensure_wifi')
+    def test_send_email(self, ensure_wifi_mock):
+        ensure_wifi_mock()
         # test sending real email
+        # ensure_wifi_mock.side_effect
         TempMonitor.send_email("test1")
         TempMonitor.send_email("test2")
 
+    @patch('src.main.TempMonitor.ensure_wifi')
     @patch('src.main.TempMonitor.mailer')
-    def test_send_email_mock(self, mailer_mock):
+    def test_send_email_mock(self, mailer_mock, ensure_wifi_mock):
+        ensure_wifi_mock()
         self.assertTrue(TempMonitor.send_email("test"))
+        # assert ensure_wifi_mock.called
         assert mailer_mock.login.called
         assert mailer_mock.send.called
         assert mailer_mock.close.called
 
+    @patch('src.main.TempMonitor.ensure_wifi')
     @patch('src.main.TempMonitor.mailer')
-    def test_send_email_mock_failed_send(self, mailer_mock):
+    def test_send_email_mock_failed_send(self, mailer_mock, ensure_wifi_mock):
+        ensure_wifi_mock()
         mailer_mock.send.side_effect = socket.gaierror
         self.assertFalse(TempMonitor.send_email("test"))
         assert mailer_mock.login.called
         assert mailer_mock.send.called
         assert mailer_mock.close.called
 
+    @patch('src.main.TempMonitor.ensure_wifi')
     @patch('src.main.TempMonitor.mailer')
-    def test_send_email_mock_failed_login(self, mailer_mock):
+    def test_send_email_mock_failed_login(self, mailer_mock, ensure_wifi_mock):
+        ensure_wifi_mock()
         mailer_mock.login.side_effect = socket.gaierror
         self.assertFalse(TempMonitor.send_email("test"))
         assert mailer_mock.login.called

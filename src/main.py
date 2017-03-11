@@ -121,20 +121,23 @@ class TempMonitor:
                 sleep_period = Setup.sleep_between_get_temp
             else:
                 sleep_period = Setup.sleep_after_send_sms
-                if cls.sim_exists:
-                    cls.log("Texting to %s:" % Setup.phones_numbers, message)
-                    for phone_number in Setup.phones_numbers:
-                        cls.get_device().smsSend(phone_number, message)
-
-                cls.log("Emailing to %s:" % Setup.emails, message)
-                if cls.send_email(message):
-                    cls.log("Email sent")
+                cls.send_notification(message)
 
             if cls.stop:
                 break
 
             cls.process_input(sleep_period)
         cls.get_device().wakeLockRelease()
+
+    @classmethod
+    def send_notification(cls, message):
+        if cls.sim_exists:
+            cls.log("Texting to %s:" % Setup.phones_numbers, message)
+            for phone_number in Setup.phones_numbers:
+                cls.get_device().smsSend(phone_number, message)
+        cls.log("Emailing to %s:" % Setup.emails, message)
+        if cls.try_send_email(message):
+            cls.log("Email sent")
 
     @classmethod
     def process_input(cls, sleep_time):
@@ -188,6 +191,7 @@ class TempMonitor:
     def send_email(cls, msg):
         ret = False
         try:
+            cls.ensure_wifi()
             if cls.mailer is None:
                 import yagmail
                 cls.mailer = yagmail.SMTP(Setup.user, Setup.password)
@@ -203,15 +207,19 @@ class TempMonitor:
         return ret
 
     @classmethod
+    def ensure_wifi(cls):
+        phone = cls.get_device()
+        for i in range(3):
+            if not phone.checkWifiState():
+                if phone.wifiReconnect():
+                    return
+                sleep(2)
+        cls.log("Cannot connect to WiFi")
+
+    @classmethod
     def try_send_email(cls, msg):
         for i in range(3):
             if cls.send_email(msg):
-                return
+                return True
             sleep(2)
-
-
-print("File name:", __file__, "Module name:", __name__)
-if __name__ == '__main__':
-    TempMonitor.run()
-else:
-    print("Unit testing")
+        return False
