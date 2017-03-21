@@ -52,7 +52,7 @@ class TempMonitor:
         phone.batteryStartMonitoring()
 
         # program halt to allow time for battery information
-        sleep(.5)
+        sleep(10)
 
         # gets temp from system and sets temp_c10 as temp in celcius( * 10)
         (id_temp, temp_in_c10, error_temp) = phone.batteryGetTemperature()
@@ -99,8 +99,9 @@ class TempMonitor:
 
     @classmethod
     def run(cls):
-        cls.get_device().wakeLockAcquirePartial()
+
         while True:
+            cls.acquire_device()
             battery_status, battery_level, temp_f = cls.try_get_battery_info()
 
             message = cls.make_message(temp_f)
@@ -117,7 +118,13 @@ class TempMonitor:
                 cls.process_input(sleep_period)
             else:
                 sleep(sleep_period)
-        cls.get_device().wakeLockRelease()
+            cls.release_device()
+
+        cls.release_device()
+
+    @classmethod
+    def acquire_device(cls):
+        cls.get_device().wakeLockAcquirePartial()
 
     @classmethod
     def send_notification(cls, message):
@@ -193,7 +200,9 @@ class TempMonitor:
             info = traceback.format_exc()
             cls.log(info)
 
-        cls.mailer.close()
+        if cls.mailer is not None:
+            cls.mailer.close()
+
         if ret == False:
             return False
         elif isinstance(ret, dict):
@@ -215,10 +224,12 @@ class TempMonitor:
                 if i > 0: # not first attempt
                     cls.log("Connected to WiFi. attempt", i)
                 return
-            (wifiid, is_connected, error) = phone.wifiReconnect()
+            (wifiid, is_connected, error) = phone.toggleWifiState(1)
             if is_connected:
                 cls.log("Re-connected to WiFi after", i, "attempt")
                 return
+            else:
+                cls.log("Failed attempt", i, "re-connecting WiFi. Error", error)
             sleep(2)
         cls.log("Cannot connect to WiFi")
 
@@ -229,3 +240,10 @@ class TempMonitor:
                 return True
             sleep(2)
         return False
+
+    @classmethod
+    def release_device(cls):
+        if cls.device is None:
+            return
+        cls.get_device().wakeLockRelease()
+        cls.device = None

@@ -24,6 +24,7 @@ class TestTempMonitor(TestCase):
     @patch('monitor.TempMonitor.mailer')
     def test_send_email_mock(self, mailer_mock, ensure_wifi_mock):
         ensure_wifi_mock()
+        mailer_mock.send.return_value = {}
         self.assertTrue(TempMonitor.send_email("test"))
         # assert ensure_wifi_mock.called
         assert mailer_mock.login.called
@@ -121,30 +122,30 @@ class TestTempMonitor(TestCase):
     @patch('monitor.TempMonitor.device')
     def test_ensure_wifi_disconnected_reconnectfails_connected(self, device_mock, log_mock):
         device_mock.checkWifiState.side_effect = [(1, False, None), (1, True, None)]
-        device_mock.wifiReconnect.return_value = (1, False, None)
+        device_mock.toggleWifiState.return_value = (1, False, None)
         TempMonitor.ensure_wifi()
         self.assertEqual(2, device_mock.checkWifiState.call_count)
-        self.assertEqual(1, device_mock.wifiReconnect.call_count)
+        self.assertEqual(1, device_mock.toggleWifiState.call_count)
         log_mock.assert_called_with("Connected to WiFi. attempt", 1)
 
     @patch('monitor.TempMonitor.log')
     @patch('monitor.TempMonitor.device')
     def test_ensure_wifi_disconnected_reconnects(self, device_mock, log_mock):
         device_mock.checkWifiState.return_value = (1, False, None)
-        device_mock.wifiReconnect.return_value = (1, True, None)
+        device_mock.toggleWifiState.return_value = (1, True, None)
         TempMonitor.ensure_wifi()
         self.assertEqual(1, device_mock.checkWifiState.call_count)
-        self.assertEqual(1, device_mock.wifiReconnect.call_count)
+        self.assertEqual(1, device_mock.toggleWifiState.call_count)
         log_mock.assert_called_with("Re-connected to WiFi after", 0, "attempt")
 
     @patch('monitor.TempMonitor.log')
     @patch('monitor.TempMonitor.device')
     def test_ensure_wifi_disconnected_reconnectfails(self, device_mock, log_mock):
         device_mock.checkWifiState.return_value = (1, False, None)
-        device_mock.wifiReconnect.return_value = (1, False, None)
+        device_mock.toggleWifiState.return_value = (1, False, None)
         TempMonitor.ensure_wifi()
         self.assertEqual(3, device_mock.checkWifiState.call_count)
-        self.assertEqual(3, device_mock.wifiReconnect.call_count)
+        self.assertEqual(3, device_mock.toggleWifiState.call_count)
         log_mock.assert_called_with("Cannot connect to WiFi")
 
 
