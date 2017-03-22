@@ -2,6 +2,7 @@ import traceback
 from datetime import datetime
 from time import sleep
 
+from alert import Alert
 from monitor_setup import Setup
 
 
@@ -33,11 +34,11 @@ class TempMonitor:
     stop = False
     device = None
     mailer = None
-    sim_exists = False
+    sim_exists = None
     last_msg_time = datetime.now()
 
-    @staticmethod
-    def battery_to_string(battery_status, battery_level):
+    @classmethod
+    def battery_to_string(cls, battery_status, battery_level):
         status_char_map = \
             {BatteryStatus.unknown:         "?",
              BatteryStatus.charging:         "+",
@@ -88,14 +89,20 @@ class TempMonitor:
             cls.log_error(err.args)
 
     @classmethod
-    def make_message(cls, temp_f):
-        message = None
+    def make_alerts(cls, temp_f, battery_status, battery_level):
+        alerts = []
         if temp_f < Setup.temp_min:
-            message = "Freezing below %s F: current temp %.0f F" % (Setup.temp_min, temp_f)
+            alert = Alert("Freezing", "Freezing below %s F: current temp %.0f F" % (Setup.temp_min, temp_f))
+            alerts.append(alert)
+        elif temp_f > Setup.temp_max:
+            alert = Alert("Freezing", "Frying above %s F: current temp %.0f F" % (Setup.temp_max, temp_f))
+            alerts.append(alert)
+        if battery_status in [BatteryStatus.notcharging, BatteryStatus.discharging]:
+            if battery_level < Setup.low_battery:
+                alert = Alert("Power loss", "Battery: " + cls.battery_to_string(battery_status, battery_level))
+                alerts.append(alert)
 
-        if temp_f > Setup.temp_max:
-            message = "Frying above %s F: current temp %.0f F" % (Setup.temp_max, temp_f)
-        return message
+        return alerts
 
     @classmethod
     def run(cls):
@@ -104,12 +111,12 @@ class TempMonitor:
             cls.acquire_device()
             battery_status, battery_level, temp_f = cls.try_get_battery_info()
 
-            message = cls.make_message(temp_f)
-            if message is None:
+            alerts = cls.make_alerts(temp_f)
+            if len(alerts) == 0:
                 sleep_period = Setup.sleep_between_get_temp
             else:
                 sleep_period = Setup.sleep_after_send_sms
-                cls.send_notification(message)
+                cls.send_notification(alerts)
 
             if cls.stop:
                 break
@@ -127,14 +134,16 @@ class TempMonitor:
         cls.get_device().wakeLockAcquirePartial()
 
     @classmethod
-    def send_notification(cls, message):
-        if cls.sim_exists:
-            cls.log("Texting to %s:" % Setup.phones_numbers, message)
-            for phone_number in Setup.phones_numbers:
-                cls.get_device().smsSend(phone_number, message)
-        cls.log("Emailing to %s:" % Setup.emails, message)
-        if cls.try_send_email(message):
-            cls.log("Email sent")
+    def send_notification(cls, alerts):
+        for alert in alerts:
+            if cls.sim_exists:
+                cls.log("Texting to %s:" % Setup.phones_numbers, alert.title)
+                for phone_number in Setup.phones_numbers:
+                    cls.get_device().smsSend(phone_number, alert.msg)
+            cls.log("Emailing to %s:" % Setup.emails, alert.title)
+            if cls.try_send_email(alert):
+                cls.log("Email sent")
+
 
     @classmethod
     def process_input(cls, sleep_time):
@@ -180,12 +189,14 @@ class TempMonitor:
             import android
             cls.device = android.Android()
             (opid, result, error) = cls.device.getNetworkOperatorName()
-            cls.sim_exists = len(result) > 1
-            cls.log("getNetworkOperatorName: ", opid, result, error)
+            sim_exists = len(result) > 1
+            if cls.sim_exists != sim_exists:
+                cls.log("getNetworkOperatorName: ", opid, result, error)
+                cls.sim_exists = sim_exists
         return cls.device
 
     @classmethod
-    def send_email(cls, msg):
+    def send_email(cls, alert):
         ret = False
         try:
             cls.ensure_wifi()
@@ -195,7 +206,7 @@ class TempMonitor:
             else:
                 cls.mailer.login(Setup.password)
 
-            ret = cls.mailer.send(Setup.emails, 'Temperature monitor', msg)
+            ret = cls.mailer.send(Setup.emails, alert.title, alert.msg)
         except:
             info = traceback.format_exc()
             cls.log(info)
@@ -234,9 +245,9 @@ class TempMonitor:
         cls.log("Cannot connect to WiFi")
 
     @classmethod
-    def try_send_email(cls, msg):
+    def try_send_email(cls, alert):
         for i in range(3):
-            if cls.send_email(msg):
+            if cls.send_email(alert):
                 return True
             sleep(2)
         return False

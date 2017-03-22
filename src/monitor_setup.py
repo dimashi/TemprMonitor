@@ -2,6 +2,7 @@ import private_info
 
 
 class Setup:
+    low_battery = 70
     temp_min = 50.0
     temp_max = 90.0
     calc_external_temp = True

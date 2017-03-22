@@ -3,6 +3,7 @@ from unittest import TestCase
 from unittest.mock import patch, Mock
 
 import private_info
+from alert import Alert
 from monitor_setup import Setup
 from monitor import TempMonitor, BatteryStatus
 
@@ -17,15 +18,15 @@ class TestTempMonitor(TestCase):
         ensure_wifi_mock()
         # test sending real email
         # ensure_wifi_mock.side_effect
-        self.assertTrue(TempMonitor.send_email("test1"))
-        self.assertTrue(TempMonitor.send_email("test2"))
+        self.assertTrue(TempMonitor.send_email(Alert("test1", "msg1")))
+        self.assertTrue(TempMonitor.send_email(Alert("test2", "msg2")))
 
     @patch('monitor.TempMonitor.ensure_wifi')
     @patch('monitor.TempMonitor.mailer')
     def test_send_email_mock(self, mailer_mock, ensure_wifi_mock):
         ensure_wifi_mock()
         mailer_mock.send.return_value = {}
-        self.assertTrue(TempMonitor.send_email("test"))
+        self.assertTrue(TempMonitor.send_email(Alert("test", "msg")))
         # assert ensure_wifi_mock.called
         assert mailer_mock.login.called
         assert mailer_mock.send.called
@@ -49,7 +50,7 @@ class TestTempMonitor(TestCase):
     def test_send_email_mock_failed_send_exception(self, mailer_mock, ensure_wifi_mock):
         ensure_wifi_mock()
         mailer_mock.send.side_effect = socket.gaierror
-        self.assertFalse(TempMonitor.send_email("test"))
+        self.assertFalse(TempMonitor.send_email(Alert("test1", "msg1")))
         assert mailer_mock.login.called
         assert mailer_mock.send.called
         assert mailer_mock.close.called
@@ -59,7 +60,7 @@ class TestTempMonitor(TestCase):
     def test_send_email_mock_failed_send_false(self, mailer_mock, ensure_wifi_mock):
         ensure_wifi_mock()
         mailer_mock.send.return_value = False
-        self.assertFalse(TempMonitor.send_email("test"))
+        self.assertFalse(TempMonitor.send_email(Alert("test1", "msg1")))
         assert mailer_mock.login.called
         assert mailer_mock.send.called
         assert mailer_mock.close.called
@@ -69,7 +70,7 @@ class TestTempMonitor(TestCase):
     def test_send_email_mock_failed_login(self, mailer_mock, ensure_wifi_mock):
         ensure_wifi_mock()
         mailer_mock.login.side_effect = socket.gaierror
-        self.assertFalse(TempMonitor.send_email("test"))
+        self.assertFalse(TempMonitor.send_email(Alert("test1", "msg1")))
         assert mailer_mock.login.called
         assert mailer_mock.login.not_called
         assert mailer_mock.close.called
