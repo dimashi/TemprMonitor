@@ -1,11 +1,11 @@
 import socket
 from unittest import TestCase
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 import private_info
 from alert import Alert
-from monitor_setup import Setup
 from monitor import TempMonitor, BatteryStatus
+from monitor_setup import Setup
 
 
 class TestTempMonitor(TestCase):
@@ -31,7 +31,6 @@ class TestTempMonitor(TestCase):
         assert mailer_mock.login.called
         assert mailer_mock.send.called
         assert mailer_mock.close.called
-
 
     @patch('monitor.TempMonitor.send_email')
     def test_send_try_email(self, send_email_mock):
@@ -87,17 +86,17 @@ class TestTempMonitor(TestCase):
         id_temp = "id_temp"
         temp_in_c10 = 200.0
         error_temp = None
-        device_mock.batteryGetTemperature.return_value=(id_temp, temp_in_c10, error_temp)
+        device_mock.batteryGetTemperature.return_value = (id_temp, temp_in_c10, error_temp)
 
         id_level = "id_level"
         battery_level = 20
         error_level = None
-        device_mock.batteryGetLevel.return_value=(id_level, battery_level, error_level)
+        device_mock.batteryGetLevel.return_value = (id_level, battery_level, error_level)
 
         id_status = "id_status"
         battery_status = BatteryStatus.charging
         error_status = None
-        device_mock.batteryGetStatus.return_value=(id_status, battery_status, error_status)
+        device_mock.batteryGetStatus.return_value = (id_status, battery_status, error_status)
 
         (actual_battery_status, actual_battery_level, temp_f) = TempMonitor.get_battery_info()
 
@@ -148,5 +147,3 @@ class TestTempMonitor(TestCase):
         self.assertEqual(3, device_mock.checkWifiState.call_count)
         self.assertEqual(3, device_mock.toggleWifiState.call_count)
         log_mock.assert_called_with("Cannot connect to WiFi")
-
-

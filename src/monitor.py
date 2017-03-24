@@ -89,7 +89,7 @@ class TempMonitor:
             cls.log_error(err.args)
 
     @classmethod
-    def make_alerts(cls, temp_f, battery_status, battery_level):
+    def make_alerts(cls, battery_status, battery_level, temp_f):
         alerts = []
         if temp_f < Setup.temp_min:
             alert = Alert("Freezing", "Freezing below %s F: current temp %.0f F" % (Setup.temp_min, temp_f))
@@ -111,7 +111,7 @@ class TempMonitor:
             cls.acquire_device()
             battery_status, battery_level, temp_f = cls.try_get_battery_info()
 
-            alerts = cls.make_alerts(temp_f)
+            alerts = cls.make_alerts(battery_status, battery_level, temp_f)
             if len(alerts) == 0:
                 sleep_period = Setup.sleep_between_get_temp
             else:
@@ -143,7 +143,6 @@ class TempMonitor:
             cls.log("Emailing to %s:" % Setup.emails, alert.title)
             if cls.try_send_email(alert):
                 cls.log("Email sent")
-
 
     @classmethod
     def process_input(cls, sleep_time):
@@ -214,7 +213,7 @@ class TempMonitor:
         if cls.mailer is not None:
             cls.mailer.close()
 
-        if ret == False:
+        if ret is False:
             return False
         elif isinstance(ret, dict):
             if len(ret) == 0:
@@ -225,14 +224,13 @@ class TempMonitor:
             cls.log("Unexpected return value from send:", ret)
         return False
 
-
     @classmethod
     def ensure_wifi(cls):
         phone = cls.get_device()
         for i in range(3):
             (wifiid, is_connected, error) = phone.checkWifiState()
             if is_connected:
-                if i > 0: # not first attempt
+                if i > 0:  # not first attempt
                     cls.log("Connected to WiFi. attempt", i)
                 return
             (wifiid, is_connected, error) = phone.toggleWifiState(1)
