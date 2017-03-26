@@ -74,12 +74,19 @@ class TempMonitor:
         if Setup.calc_external_temp:
             external_temp_c = get_external_temp_c(temp_c)
             external_temp_f = c_to_f(external_temp_c)
-            cls.log("%s, %.0fF, ext %.0fF" % (battery_status_str, temp_f, external_temp_f))
+            cls.log(cls.make_info_string(battery_status_str, temp_f, external_temp_f))
             temp_f = external_temp_f
         else:
-            cls.log("%s, %.0fF" % (battery_status_str, temp_f))
+            cls.log(cls.make_info_string(battery_status_str, temp_f))
 
         return battery_status, battery_level, temp_f
+
+    @classmethod
+    def make_info_string(cls, battery_status_str, temp_f, external_temp_f=None):
+        if external_temp_f is None:
+            return "%s, %.0fF" % (battery_status_str, temp_f)
+        else:
+            return "%s, %.0fF, ext %.0fF" % (battery_status_str, temp_f, external_temp_f)
 
     @classmethod
     def try_get_battery_info(cls):
@@ -91,15 +98,16 @@ class TempMonitor:
     @classmethod
     def make_alerts(cls, battery_status, battery_level, temp_f):
         alerts = []
+        current_info = cls.make_info_string(cls.battery_to_string(battery_status, battery_level), temp_f)
         if temp_f < Setup.temp_min:
-            alert = Alert("Freezing", "Freezing below %s F: current temp %.0f F" % (Setup.temp_min, temp_f))
+            alert = Alert("Freezing", ("Freezing below %s F: " % Setup.temp_min) + current_info)
             alerts.append(alert)
         elif temp_f > Setup.temp_max:
-            alert = Alert("Freezing", "Frying above %s F: current temp %.0f F" % (Setup.temp_max, temp_f))
+            alert = Alert("Frying", ("Frying above %s F: " % Setup.temp_max) + current_info)
             alerts.append(alert)
         if battery_status in [BatteryStatus.notcharging, BatteryStatus.discharging]:
             if battery_level < Setup.low_battery:
-                alert = Alert("Power loss", "Battery: " + cls.battery_to_string(battery_status, battery_level))
+                alert = Alert("Power loss", ("Battery level below %s" % Setup.low_battery) +current_info)
                 alerts.append(alert)
 
         return alerts
