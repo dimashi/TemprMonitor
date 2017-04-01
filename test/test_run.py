@@ -11,7 +11,6 @@ class TestRun(unittest.TestCase):
         self.mon.device = Mock()
         self.mon.log = Mock()
         self.mon.log_error = Mock()
-
         self.mon.device.smsSend = Mock()
         self.mon.device.batteryGetStatus = Mock(return_value=(0, BatteryStatus.unknown, None))
         self.mon.device.batteryGetLevel = Mock(return_value=(0, 77, None))
