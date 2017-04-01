@@ -13,7 +13,8 @@ class TestBatteryInfo(TestCase):
         self.device.batteryGetStatus = Mock(return_value=(0, BatteryStatus.unknown, None))
         self.device.batteryGetLevel = Mock(return_value=(0, 77, None))
         self.mon = TempMonitor()
-        self.mon.get_device = Mock(return_value=self.device)
+        self.mon.init_device = Mock(return_value=self.device)
+        self.mon.device = self.device
         self.mon.log = Mock()
         self.mon.log_error = Mock()
 

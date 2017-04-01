@@ -3,6 +3,7 @@ from unittest.mock import Mock
 from unittest import TestCase
 
 from monitor import TempMonitor
+from wifi import Wifi
 
 
 class TestWifi(TestCase):
@@ -14,7 +15,8 @@ class TestWifi(TestCase):
 
     def test_ensure_wifi_connected(self):
         self.mon.device.checkWifiState.return_value = (1, True, None)
-        self.mon.device.wifiGetConnectionInfo.return_value = (2, {"supplicant_state" : "completed", "ip" : 101}, None)
+        self.mon.device.wifiGetConnectionInfo.return_value =\
+            (2, {Wifi.state: Wifi.state_completed, Wifi.ip: 101}, None)
         self.mon.ensure_wifi()
         self.assertEqual(1, self.mon.device.checkWifiState.call_count)
         self.assertEqual(0, self.mon.device.wifiReconnect.call_count)
@@ -24,8 +26,8 @@ class TestWifi(TestCase):
         self.mon.device.checkWifiState.side_effect = [(1, False, None), (2, True, None)]
         self.mon.device.toggleWifiState.return_value = (3, False, None)
         self.mon.device.wifiGetConnectionInfo.side_effect = [
-            (4, {"supplicant_state" : "scanning", "ip" : 0}, None),
-            (5, {"supplicant_state" : "completed", "ip" : 101}, None)
+            (4, {Wifi.state: Wifi.state_scanning, Wifi.ip: 0}, None),
+            (5, {Wifi.state: Wifi.state_completed, Wifi.ip: 101}, None)
             ]
         self.mon.ensure_wifi()
         self.assertEqual(2, self.mon.device.checkWifiState.call_count)
@@ -35,7 +37,8 @@ class TestWifi(TestCase):
     def test_ensure_wifi_disconnected_reconnects(self):
         self.mon.device.checkWifiState.return_value = (1, False, None)
         self.mon.device.toggleWifiState.return_value = (1, True, None)
-        self.mon.device.wifiGetConnectionInfo.return_value = (2, {"supplicant_state" : "completed", "ip" : 101}, None)
+        self.mon.device.wifiGetConnectionInfo.return_value =\
+            (2, {Wifi.state: Wifi.state_completed, Wifi.ip: 101}, None)
         self.mon.ensure_wifi()
         self.assertEqual(1, self.mon.device.checkWifiState.call_count)
         self.assertEqual(1, self.mon.device.toggleWifiState.call_count)

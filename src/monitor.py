@@ -4,6 +4,7 @@ from time import sleep
 
 from alert import Alert
 from monitor_setup import Setup
+from wifi import Wifi
 
 
 def c_to_f(temp_c):
@@ -49,18 +50,18 @@ class TempMonitor:
         return "%s%s" % (battery_level, status_char_map[battery_status])
 
     def get_battery_info(self):
-        phone = self.get_device()
-        phone.batteryStartMonitoring()
+        self.init_device()
+        self.device.batteryStartMonitoring()
 
         # program halt to allow time for battery information
         sleep(10)
 
         # gets temp from system and sets temp_c10 as temp in celcius( * 10)
-        (id_temp, temp_in_c10, error_temp) = phone.batteryGetTemperature()
-        (id_level, battery_level, error_level) = phone.batteryGetLevel()
-        (id_status, battery_status, error_status) = phone.batteryGetStatus()
+        (id_temp, temp_in_c10, error_temp) = self.device.batteryGetTemperature()
+        (id_level, battery_level, error_level) = self.device.batteryGetLevel()
+        (id_status, battery_status, error_status) = self.device.batteryGetStatus()
 
-        phone.batteryStopMonitoring()
+        self.device.batteryStopMonitoring()
 
         for name, error in [("temperature", error_temp), ("level", error_level), ("status", error_status)]:
             if error is not None:
@@ -98,14 +99,14 @@ class TempMonitor:
         alerts = []
         current_info = self.make_info_string(self.battery_to_string(battery_status, battery_level), temp_f)
         if temp_f < Setup.temp_min:
-            alert = Alert("Freezing", ("Freezing below %sF: " % Setup.temp_min) + current_info)
+            alert = Alert("Freezing", ("Freezing below %.0fF: " % Setup.temp_min) + current_info)
             alerts.append(alert)
         elif temp_f > Setup.temp_max:
-            alert = Alert("Frying", ("Frying above %sF: " % Setup.temp_max) + current_info)
+            alert = Alert("Frying", ("Frying above %.0fF: " % Setup.temp_max) + current_info)
             alerts.append(alert)
         if battery_status in [BatteryStatus.notcharging, BatteryStatus.discharging]:
             if battery_level < Setup.low_battery:
-                alert = Alert("Power loss", ("Battery level below %s" % Setup.low_battery) + current_info)
+                alert = Alert("Power loss", ("Battery level below %s " % Setup.low_battery) + current_info)
                 alerts.append(alert)
 
         return alerts
@@ -135,14 +136,14 @@ class TempMonitor:
         self.release_device()
 
     def acquire_device(self):
-        self.get_device().wakeLockAcquirePartial()
+        self.init_device().wakeLockAcquirePartial()
 
     def send_notification(self, alerts):
         for alert in alerts:
             if self.sim_exists:
                 self.log("Texting to %s:" % Setup.phones_numbers, alert.title)
                 for phone_number in Setup.phones_numbers:
-                    self.get_device().smsSend(phone_number, alert.msg)
+                    self.init_device().smsSend(phone_number, alert.msg)
             self.log("Emailing to %s:" % Setup.emails, alert.title)
             if self.try_send_email(alert):
                 self.log("Email sent")
@@ -152,7 +153,7 @@ class TempMonitor:
         short_sleep = 5
         while slept < sleep_time:
             now = datetime.now()
-            (msgid, messages, error) = self.get_device().smsGetMessages(False, 'inbox')
+            (msgid, messages, error) = self.init_device().smsGetMessages(False, 'inbox')
             if error is not None:
                 self.log_error("smsGetMessages returned error:", error)
 
@@ -182,7 +183,7 @@ class TempMonitor:
     def log_error(self, *args):
         self.log(*args)
 
-    def get_device(self):
+    def init_device(self):
         if self.device is None:
             import android
             self.device = android.Android()
@@ -223,24 +224,24 @@ class TempMonitor:
         return False
 
     def ensure_wifi(self):
-        phone = self.get_device()
+        self.init_device()
         if self.reconnect_wifi():
             for i in range(10):
-                (info_id, info, error) = phone.wifiGetConnectionInfo()
+                (info_id, info, error) = self.device.wifiGetConnectionInfo()
                 if error is None:
-                    if info["supplicant_state"] == "completed" and info["ip"] > 0:
+                    if info[Wifi.state] == Wifi.state_completed and info[Wifi.ip] > 0:
                         return
                 sleep(Setup.sleep_waiting_wifi)
 
     def reconnect_wifi(self):
-        phone = self.get_device()
+        self.init_device()
         for i in range(3):
-            (wifiid, is_connected, error) = phone.checkWifiState()
+            (wifiid, is_connected, error) = self.device.checkWifiState()
             if is_connected:
                 if i > 0:  # not first attempt
                     self.log("Connected to WiFi. attempt", i)
                 return True
-            (wifiid, is_connected, error) = phone.toggleWifiState(1)
+            (wifiid, is_connected, error) = self.device.toggleWifiState(1)
             if is_connected:
                 self.log("Re-connected to WiFi after", i, "attempt")
                 return True
@@ -260,5 +261,5 @@ class TempMonitor:
     def release_device(self):
         if self.device is None:
             return
-        self.get_device().wakeLockRelease()
+        self.device.wakeLockRelease()
         self.device = None
