@@ -13,4 +13,5 @@ class Setup:
     password = private_info.password
     sleep_between_get_temp = 300
     sleep_after_send_sms = 1800
+    sleep_waiting_wifi = 3
     process_input = False

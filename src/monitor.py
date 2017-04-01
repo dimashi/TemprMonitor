@@ -31,14 +31,15 @@ class BatteryStatus:
 
 class TempMonitor:
 
-    stop = False
-    device = None
-    mailer = None
-    sim_exists = None
-    last_msg_time = datetime.now()
+    def __init__(self):
+        self.stop = False
+        self.device = None
+        self.mailer = None
+        self.sim_exists = None
+        self.last_msg_time = datetime.now()
 
-    @classmethod
-    def battery_to_string(cls, battery_status, battery_level):
+    @staticmethod
+    def battery_to_string(battery_status, battery_level):
         status_char_map = \
             {BatteryStatus.unknown:         "?",
              BatteryStatus.charging:         "+",
@@ -47,9 +48,8 @@ class TempMonitor:
              BatteryStatus.full:             "^"}
         return "%s%s" % (battery_level, status_char_map[battery_status])
 
-    @classmethod
-    def get_battery_info(cls):
-        phone = cls.get_device()
+    def get_battery_info(self):
+        phone = self.get_device()
         phone.batteryStartMonitoring()
 
         # program halt to allow time for battery information
@@ -66,7 +66,7 @@ class TempMonitor:
             if error is not None:
                 raise RuntimeError("Error getting battery %s: %s" % (name, error))
 
-        battery_status_str = cls.battery_to_string(battery_status, battery_level)
+        battery_status_str = self.battery_to_string(battery_status, battery_level)
 
         # divides so temp will come out correct in C
         temp_c = temp_in_c10 / 10.0
@@ -74,152 +74,142 @@ class TempMonitor:
         if Setup.calc_external_temp:
             external_temp_c = get_external_temp_c(temp_c)
             external_temp_f = c_to_f(external_temp_c)
-            cls.log(cls.make_info_string(battery_status_str, temp_f, external_temp_f))
+            self.log(self.make_info_string(battery_status_str, temp_f, external_temp_f))
             temp_f = external_temp_f
         else:
-            cls.log(cls.make_info_string(battery_status_str, temp_f))
+            self.log(self.make_info_string(battery_status_str, temp_f))
 
         return battery_status, battery_level, temp_f
 
-    @classmethod
-    def make_info_string(cls, battery_status_str, temp_f, external_temp_f=None):
+    @staticmethod
+    def make_info_string(battery_status_str, temp_f, external_temp_f=None):
         if external_temp_f is None:
             return "%s, %.0fF" % (battery_status_str, temp_f)
         else:
             return "%s, %.0fF, ext %.0fF" % (battery_status_str, temp_f, external_temp_f)
 
-    @classmethod
-    def try_get_battery_info(cls):
+    def try_get_battery_info(self):
         try:
-            return cls.get_battery_info()
+            return self.get_battery_info()
         except Exception as err:
-            cls.log_error(err.args)
+            self.log_error(err.args)
 
-    @classmethod
-    def make_alerts(cls, battery_status, battery_level, temp_f):
+    def make_alerts(self, battery_status, battery_level, temp_f):
         alerts = []
-        current_info = cls.make_info_string(cls.battery_to_string(battery_status, battery_level), temp_f)
+        current_info = self.make_info_string(self.battery_to_string(battery_status, battery_level), temp_f)
         if temp_f < Setup.temp_min:
-            alert = Alert("Freezing", ("Freezing below %s F: " % Setup.temp_min) + current_info)
+            alert = Alert("Freezing", ("Freezing below %sF: " % Setup.temp_min) + current_info)
             alerts.append(alert)
         elif temp_f > Setup.temp_max:
-            alert = Alert("Frying", ("Frying above %s F: " % Setup.temp_max) + current_info)
+            alert = Alert("Frying", ("Frying above %sF: " % Setup.temp_max) + current_info)
             alerts.append(alert)
         if battery_status in [BatteryStatus.notcharging, BatteryStatus.discharging]:
             if battery_level < Setup.low_battery:
-                alert = Alert("Power loss", ("Battery level below %s" % Setup.low_battery) +current_info)
+                alert = Alert("Power loss", ("Battery level below %s" % Setup.low_battery) + current_info)
                 alerts.append(alert)
 
         return alerts
 
-    @classmethod
-    def run(cls):
+    def run(self):
 
         while True:
-            cls.acquire_device()
-            battery_status, battery_level, temp_f = cls.try_get_battery_info()
+            self.acquire_device()
+            battery_status, battery_level, temp_f = self.try_get_battery_info()
 
-            alerts = cls.make_alerts(battery_status, battery_level, temp_f)
+            alerts = self.make_alerts(battery_status, battery_level, temp_f)
             if len(alerts) == 0:
                 sleep_period = Setup.sleep_between_get_temp
             else:
                 sleep_period = Setup.sleep_after_send_sms
-                cls.send_notification(alerts)
+                self.send_notification(alerts)
 
-            if cls.stop:
+            if self.stop:
                 break
 
             if Setup.process_input:
-                cls.process_input(sleep_period)
+                self.process_input(sleep_period)
             else:
                 sleep(sleep_period)
-            cls.release_device()
+            self.release_device()
 
-        cls.release_device()
+        self.release_device()
 
-    @classmethod
-    def acquire_device(cls):
-        cls.get_device().wakeLockAcquirePartial()
+    def acquire_device(self):
+        self.get_device().wakeLockAcquirePartial()
 
-    @classmethod
-    def send_notification(cls, alerts):
+    def send_notification(self, alerts):
         for alert in alerts:
-            if cls.sim_exists:
-                cls.log("Texting to %s:" % Setup.phones_numbers, alert.title)
+            if self.sim_exists:
+                self.log("Texting to %s:" % Setup.phones_numbers, alert.title)
                 for phone_number in Setup.phones_numbers:
-                    cls.get_device().smsSend(phone_number, alert.msg)
-            cls.log("Emailing to %s:" % Setup.emails, alert.title)
-            if cls.try_send_email(alert):
-                cls.log("Email sent")
+                    self.get_device().smsSend(phone_number, alert.msg)
+            self.log("Emailing to %s:" % Setup.emails, alert.title)
+            if self.try_send_email(alert):
+                self.log("Email sent")
 
-    @classmethod
-    def process_input(cls, sleep_time):
+    def process_input(self, sleep_time):
         slept = 0
         short_sleep = 5
         while slept < sleep_time:
             now = datetime.now()
-            (msgid, messages, error) = cls.get_device().smsGetMessages(False, 'inbox')
+            (msgid, messages, error) = self.get_device().smsGetMessages(False, 'inbox')
             if error is not None:
-                cls.log_error("smsGetMessages returned error:", error)
+                self.log_error("smsGetMessages returned error:", error)
 
             for m in messages:
-                if datetime.fromtimestamp(int(m["date"])/1000) >= cls.last_msg_time:
-                    cls.log("Received message", m)
-                    cls.last_msg_time = now
+                if datetime.fromtimestamp(int(m["date"])/1000) >= self.last_msg_time:
+                    self.log("Received message", m)
+                    self.last_msg_time = now
 
-                    if cls.execute_command(m["body"]):
+                    if self.execute_command(m["body"]):
                         return
 
             sleep(short_sleep)
             slept += short_sleep
 
-    @classmethod
-    def execute_command(cls, text):
+    def execute_command(self, text):
         try:
             exec(text)
-            cls.log("Executed:", text)
+            self.log("Executed:", text)
             return True
         except Exception as err:
-            cls.log_error("Error execution command %s. error %s" % (text, err.args))
+            self.log_error("Error execution command %s. error %s" % (text, err.args))
 
     @staticmethod
     def log(*args):
         log(*args)
 
-    @classmethod
-    def log_error(cls, *args):
-        cls.log(*args)
+    def log_error(self, *args):
+        self.log(*args)
 
-    @classmethod
-    def get_device(cls):
-        if cls.device is None:
+    def get_device(self):
+        if self.device is None:
             import android
-            cls.device = android.Android()
-            (opid, result, error) = cls.device.getNetworkOperatorName()
+            self.device = android.Android()
+            (opid, result, error) = self.device.getNetworkOperatorName()
             sim_exists = len(result) > 1
-            if cls.sim_exists != sim_exists:
-                cls.log("getNetworkOperatorName: ", opid, result, error)
-                cls.sim_exists = sim_exists
-        return cls.device
+            if self.sim_exists != sim_exists:
+                self.log("getNetworkOperatorName: ", opid, result, error)
+                self.sim_exists = sim_exists
+        return self.device
 
-    @classmethod
-    def send_email(cls, alert):
+    def send_email(self, alert):
         ret = False
         try:
-            cls.ensure_wifi()
-            if cls.mailer is None:
+            self.ensure_wifi()
+            if self.mailer is None:
                 import yagmail
-                cls.mailer = yagmail.SMTP(Setup.user, Setup.password)
+                self.mailer = yagmail.SMTP(Setup.user, Setup.password)
             else:
-                cls.mailer.login(Setup.password)
+                self.mailer.login(Setup.password)
 
-            ret = cls.mailer.send(Setup.emails, alert.title, alert.msg)
+            ret = self.mailer.send(Setup.emails, alert.title, alert.msg)
         except:
             info = traceback.format_exc()
-            cls.log(info)
+            self.log(info)
 
-        if cls.mailer is not None:
-            cls.mailer.close()
+        if self.mailer is not None:
+            self.mailer.close()
 
         if ret is False:
             return False
@@ -227,40 +217,48 @@ class TempMonitor:
             if len(ret) == 0:
                 return True
             else:
-                cls.log("Refused recipients:", ret)
+                self.log("Refused recipients:", ret)
         else:
-            cls.log("Unexpected return value from send:", ret)
+            self.log("Unexpected return value from send:", ret)
         return False
 
-    @classmethod
-    def ensure_wifi(cls):
-        phone = cls.get_device()
+    def ensure_wifi(self):
+        phone = self.get_device()
+        if self.reconnect_wifi():
+            for i in range(10):
+                (info_id, info, error) = phone.wifiGetConnectionInfo()
+                if error is None:
+                    if info["supplicant_state"] == "completed" and info["ip"] > 0:
+                        return
+                sleep(Setup.sleep_waiting_wifi)
+
+    def reconnect_wifi(self):
+        phone = self.get_device()
         for i in range(3):
             (wifiid, is_connected, error) = phone.checkWifiState()
             if is_connected:
                 if i > 0:  # not first attempt
-                    cls.log("Connected to WiFi. attempt", i)
-                return
+                    self.log("Connected to WiFi. attempt", i)
+                return True
             (wifiid, is_connected, error) = phone.toggleWifiState(1)
             if is_connected:
-                cls.log("Re-connected to WiFi after", i, "attempt")
-                return
+                self.log("Re-connected to WiFi after", i, "attempt")
+                return True
             else:
-                cls.log("Failed attempt", i, "re-connecting WiFi. Error", error)
+                self.log("Failed attempt", i, "re-connecting WiFi. Error", error)
             sleep(2)
-        cls.log("Cannot connect to WiFi")
+        self.log("Cannot connect to WiFi")
+        return False
 
-    @classmethod
-    def try_send_email(cls, alert):
+    def try_send_email(self, alert):
         for i in range(3):
-            if cls.send_email(alert):
+            if self.send_email(alert):
                 return True
             sleep(2)
         return False
 
-    @classmethod
-    def release_device(cls):
-        if cls.device is None:
+    def release_device(self):
+        if self.device is None:
             return
-        cls.get_device().wakeLockRelease()
-        cls.device = None
+        self.get_device().wakeLockRelease()
+        self.device = None

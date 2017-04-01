@@ -1,3 +1,3 @@
 from monitor import TempMonitor
 
-TempMonitor.run()
+TempMonitor().run()
