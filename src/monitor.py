@@ -262,4 +262,5 @@ class TempMonitor:
         if self.device is None:
             return
         self.device.wakeLockRelease()
+        self.device.conn.close()
         self.device = None
